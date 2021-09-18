@@ -46,10 +46,13 @@ parse_doc(Document, []) -> Document.
 %% of the CommonMark algorithm.
 merge_blocks(none, X) -> X;
 
+%% if the previous block's open block
+%% was none and we've got another empty block
+%% then we simply return the previous block
 merge_blocks(
-    {TypeA, ClosedA, none},
-    {empty, _, _}) ->
-        {TypeA, ClosedA, none};
+  A = {TypeA, ClosedA, none},
+  {empty, _, _}) ->
+    A;
 
 merge_blocks(
     {TypeA, ClosedA, OpenA},
