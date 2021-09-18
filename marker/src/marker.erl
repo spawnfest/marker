@@ -46,66 +46,83 @@ parse_doc(Document, []) -> Document.
 %% of the CommonMark algorithm.
 merge_blocks(none, X) -> X;
 
-%% if the previous block's open block
-%% was none and we've got another empty block
-%% then we simply return the previous block
 merge_blocks(
-  A = {TypeA, ClosedA, none},
-  {empty, _, _}) ->
-    A;
+  {bullet_list, CloseBullets, OpenItem},
+  {bullet_list, _, OpenB}) ->
+    {bullet_list, CloseBullets ++ [OpenItem], OpenB};
 
 merge_blocks(
-    {TypeA, ClosedA, OpenA},
-    {empty, _, _}) ->
-        {TypeA, ClosedA ++ [OpenA], none};
+  {bullet_list, CloseBullets, OpenItem},
+  B = {list_item, _, _}) ->
+    {bullet_list, CloseBullets ++ [OpenItem], B};
 
 merge_blocks(
-    {bullet_list, CloseBullets, OpenItem},
-    {bullet_list, _, OpenB}) ->
-        {bullet_list, CloseBullets ++ [OpenItem], OpenB};
+  {block_quote, ClosedA, OpenA},
+  {block_quote, _, OpenB}) ->
+    {block_quote, ClosedA, merge_blocks(OpenA, OpenB)};
 
 merge_blocks(
-    {bullet_list, CloseBullets, OpenItem},
-    B={list_item, _, _}) ->
-        {bullet_list, CloseBullets ++ [OpenItem], B};
+  {paragraph, ClosedA, OpenA},
+  {paragraph, _, OpenB}) ->
+    {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
 
 merge_blocks(
-    {block_quote, ClosedA, OpenA},
-    {block_quote, _, OpenB}) ->
-        {block_quote, ClosedA, merge_blocks(OpenA, OpenB)};
+  {TypeA, ClosedA, OpenA},
+  B = {paragraph, _, _}) ->
+    {TypeA, ClosedA, merge_blocks(OpenA, B)};
+
+merge_blocks(A = {TypeA, ClosedA, none}, B) ->
+    {TypeA, ClosedA, B};
 
 merge_blocks(
-    {paragraph, ClosedA, OpenA},
-    {paragraph, _, OpenB}) ->
-        {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
+  {TypeA, ClosedA, OpenA = {Type, _, _}},
+  {Type, _, OpenB}) ->
+    {TypeA, ClosedA, merge_blocks(OpenA, OpenB)};
 
-merge_blocks(
-    {TypeA, ClosedA, OpenA},
-    B={paragraph, _, _}) ->
-        {TypeA, ClosedA, merge_blocks(OpenA, B)};
-
-merge_blocks(
-    {TypeA, ClosedA, none},
-    B) ->
-        {TypeA, ClosedA, B};
-
-merge_blocks(
-    {TypeA, ClosedA, OpenA = {Type, _, _}},
-    {Type, _, OpenB}) ->
-        {TypeA, ClosedA, merge_blocks(OpenA, OpenB)};
-
-merge_blocks(
-    {TypeA, ClosedA, OpenA},
-    B) ->
-        {TypeA, ClosedA ++ [OpenA], B}.
+merge_blocks({TypeA, ClosedA, OpenA}, B) ->
+    {TypeA, ClosedA ++ [OpenA], B}.
 
 
 line_to_block([62|T]) ->
     {block_quote, [], line_to_block(string:strip(T, left))};
 line_to_block([45|T]) ->
     {bullet_list, [], {list_item, [], line_to_block(string:strip(T, left))}};
-line_to_block([]) -> {empty, [], []};
+line_to_block([]) -> none;
 line_to_block(T) -> {paragraph, [], T}.
+
+%% Base cases for our block_to_string/1 function
+%% are either a paragraph block or a none atom
+block_to_string({paragraph, [], Text}) ->
+    "paragraph\n" ++ Text;
+
+block_to_string(none) ->
+    "";
+
+block_to_string({Type, ClosedBlocks, OpenBlock}) ->
+    erlang:display(ClosedBlocks),
+    erlang:display(OpenBlock),
+    atom_to_list(Type) ++ "\n" ++ blocks_to_string(ClosedBlocks) ++ block_to_string(OpenBlock).
+
+%% When there are no blocks in the array
+blocks_to_string([]) ->
+    "";
+
+blocks_to_string([Block|Rest]) ->
+    block_to_string(Block) ++ blocks_to_string(Rest).
+
+block_to_string_test() ->
+    ?assertEqual(
+       "paragraph\nfoo",
+       block_to_string({paragraph, [], "foo"})
+      ),
+
+    ?assertEqual(
+       "document\n"
+       "paragraph\n"
+       "foo",
+       block_to_string({document, [{paragraph,[],"foo"}], none})
+      ).
+
 
 markdown_test() ->
     ?assertEqual({ok, {document, [], none}}, markdown("")),
