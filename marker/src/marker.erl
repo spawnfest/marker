@@ -45,38 +45,52 @@ parse_doc(Document, []) -> Document.
 %% merge_blocks manages open and closed blocks, based on phase 1
 %% of the CommonMark algorithm.
 merge_blocks(none, X) -> X;
+
+merge_blocks(
+    {TypeA, ClosedA, none},
+    {empty, _, _}) ->
+        {TypeA, ClosedA, none};
+
 merge_blocks(
     {TypeA, ClosedA, OpenA},
     {empty, _, _}) ->
         {TypeA, ClosedA ++ [OpenA], none};
+
 merge_blocks(
     {bullet_list, CloseBullets, OpenItem},
     {bullet_list, _, OpenB}) ->
         {bullet_list, CloseBullets ++ [OpenItem], OpenB};
+
 merge_blocks(
     {bullet_list, CloseBullets, OpenItem},
     B={list_item, _, _}) ->
         {bullet_list, CloseBullets ++ [OpenItem], B};
+
 merge_blocks(
     {block_quote, ClosedA, OpenA},
     {block_quote, _, OpenB}) ->
         {block_quote, ClosedA, merge_blocks(OpenA, OpenB)};
+
 merge_blocks(
     {paragraph, ClosedA, OpenA},
     {paragraph, _, OpenB}) ->
         {paragraph, ClosedA, OpenA ++ OpenB};
+
 merge_blocks(
     {TypeA, ClosedA, OpenA},
     B={paragraph, _, _}) ->
         {TypeA, ClosedA, merge_blocks(OpenA, B)};
+
 merge_blocks(
     {TypeA, ClosedA, none},
     B) ->
         {TypeA, ClosedA, B};
+
 merge_blocks(
     {TypeA, ClosedA, OpenA = {Type, _, _}},
     {Type, _, OpenB}) ->
         {TypeA, ClosedA, merge_blocks(OpenA, OpenB)};
+
 merge_blocks(
     {TypeA, ClosedA, OpenA},
     B) ->
@@ -91,6 +105,7 @@ line_to_block([]) -> {empty, [], []};
 line_to_block(T) -> {paragraph, [], T}.
 
 markdown_test() ->
+    ?assertEqual({ok, {document, [], none}}, markdown("")),
     ?assertEqual({ok, {document, [], {paragraph, [], "testpar"}}}, markdown("testpar")),
     ?assertEqual(
         {ok, {document, [{paragraph, [], "testpar"}], {paragraph, [], "nextpar"}}},
