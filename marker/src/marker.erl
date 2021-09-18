@@ -102,18 +102,17 @@ markdown_test() ->
                     {list_item, [], {paragraph, [], "aliquando id"}}}}}},
         markdown(
 "> - Qui *quodsi iracundia*\n"
+"> - aliquando id")),
+    ?assertEqual(
+        {ok, {document, [],
+            {block_quote, [{paragraph, [], "Lorem ipsum dolor sit amet."}],
+                {bullet_list, [{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],
+                    {list_item, [], {paragraph, [], "aliquando id"}}}}}},
+        markdown(
+"> Lorem ipsum dolor\n"
+" sit amet.\n"
+"> - Qui *quodsi iracundia*\n"
 "> - aliquando id")).
-%     ?assertEqual(
-%         {ok, {document, [],
-%             {block_quote, [{paragraph, [], "Lorem ipsum dolor sit amet."}],
-%                 {bullet_list, [],
-%                     {list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}},
-%                     {list_item, [], {paragraph, [], "aliquando id"}}}}}},
-%         markdown(
-% "> Lorem ipsum dolor\n"
-% "sit amet.\n"
-% "> - Qui *quodsi iracundia*\n"
-% "> - aliquando id\n")).
 
 
 parse_doc_test() ->
