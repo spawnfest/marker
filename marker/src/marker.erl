@@ -46,10 +46,13 @@ parse_doc(Document, []) -> Document.
 %% of the CommonMark algorithm.
 merge_blocks(none, X) -> X;
 
+%% if the previous block's open block
+%% was none and we've got another empty block
+%% then we simply return the previous block
 merge_blocks(
-    {TypeA, ClosedA, none},
-    {empty, _, _}) ->
-        {TypeA, ClosedA, none};
+  A = {TypeA, ClosedA, none},
+  {empty, _, _}) ->
+    A;
 
 merge_blocks(
     {TypeA, ClosedA, OpenA},
@@ -74,7 +77,7 @@ merge_blocks(
 merge_blocks(
     {paragraph, ClosedA, OpenA},
     {paragraph, _, OpenB}) ->
-        {paragraph, ClosedA, OpenA ++ OpenB};
+        {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
 
 merge_blocks(
     {TypeA, ClosedA, OpenA},
@@ -120,19 +123,18 @@ markdown_test() ->
 "> - aliquando id")),
     ?assertEqual(
         {ok, {document, [],
-            {block_quote, [{paragraph, [], "Lorem ipsum dolor sit amet."}],
+            {block_quote, [{paragraph, [], "Lorem ipsum dolor\nsit amet."}],
                 {bullet_list, [{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}}},
-        markdown(
-"> Lorem ipsum dolor\n"
-" sit amet.\n"
-"> - Qui *quodsi iracundia*\n"
-"> - aliquando id")).
+        markdown("> Lorem ipsum dolor\n"
+                 "sit amet.\n"
+                 "> - Qui *quodsi iracundia*\n"
+                 "> - aliquando id")).
 
 
 parse_doc_test() ->
     ?assertEqual(
-        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}}},
+        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor \nsit amet."}}},
         parse_into_blocks("> Lorem ipsum dolor \nsit amet.")).
 
 line_type_test() ->
@@ -148,19 +150,19 @@ line_type_test() ->
 
 merge_blocks_test() ->
     ?assertEqual(
-        {paragraph, [], "Lorem ipsum dolor sit amet."},
+        {paragraph, [], "Lorem ipsum dolor\n sit amet."},
         merge_blocks(
             {paragraph, [], "Lorem ipsum dolor"},
             {paragraph, [], " sit amet."}
             )),
     ?assertEqual(
-        {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}},
+        {block_quote, [], {paragraph, [], "Lorem ipsum dolor\n sit amet."}},
         merge_blocks(
             {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}},
             {paragraph, [], " sit amet."}
             )),
     ?assertEqual(
-        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}}},
+        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor\n sit amet."}}},
         merge_blocks(
             {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}}},
             {block_quote, [], {paragraph, [], " sit amet."}}
