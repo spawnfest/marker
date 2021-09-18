@@ -1,4 +1,6 @@
 %%% marker module is the main marker lib module responsible for Markdown parsing.
+%%% Parsing follows the parsing strategy described in
+%%% https://spec.commonmark.org/0.30/#appendix-a-parsing-strategy
 -module(marker).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -11,45 +13,113 @@
 %%   * a tuple in form {type, text, alttext}, where type is the type of the element
 %%
 %% Type returned in tuples described above can be one of:
-%%   * normal
+%%   * str
 %%   * paragraph
+%%   * bullet_list
+%%   * list_item
 %%   * italic
-%%   * bold
+%%   * emph
 %%   * link
 markdown(T)
-    -> {ok, to_paragraphs(T)}.
+    -> {ok, parse_into_blocks(T)}.
 
 %% markdown/2 parses given string according to passed flavour.
 %% At the moment the only supported flavour for the time being is CommonMark.
 markdown(T, _)
     -> markdown(T).
 
-%% to_paragraphs/1 splits given string into paragraph elements.
-to_paragraphs(T)
-    -> lists:map(fun parse/1,
-        lists:map(fun(X) -> {par, X} end,
-            lists:filter(fun(X) -> length(X) > 0 end,string:split(T, "\n", all)))).
+% parse_blocks implements the first phase of CommonMark parsing strategy,
+% dividing input text into blocks.
+% Returns a list representing a document tree.
+parse_into_blocks(T)
+    -> parse_doc({document, [], none}, string:split(T, "\n", all)).
 
-parse({par, T})
-    -> {par, [{normal, T}]}.
+parse_doc(Document, [NextLine|T]) ->
+    parse_doc(merge_blocks(Document, line_to_block(NextLine)), T);
+parse_doc(Document, []) -> Document.
+
+merge_blocks(none, X) -> X;
+merge_blocks(
+    {TypeA, ClosedA, OpenA},
+    {empty, _, _}) ->
+        {TypeA, ClosedA ++ [OpenA], none};
+merge_blocks(
+    {paragraph, ClosedA, OpenA},
+    {paragraph, _, OpenB}) ->
+        {paragraph, ClosedA, OpenA ++ OpenB};
+merge_blocks(
+    {TypeA, ClosedA, OpenA},
+    B={paragraph, _, _}) ->
+        {TypeA, ClosedA, merge_blocks(OpenA, B)};
+merge_blocks(
+    {TypeA, ClosedA, none},
+    B) ->
+        {TypeA, ClosedA, B};
+merge_blocks(
+    {TypeA, ClosedA, OpenA = {Type, _, _}},
+    {Type, _, OpenB}) ->
+        {TypeA, ClosedA, merge_blocks(OpenA, OpenB)};
+merge_blocks(
+    {TypeA, ClosedA, OpenA},
+    B) ->
+        {TypeA, ClosedA ++ [OpenA], B}.
+
+
+line_to_block([62|T]) -> {block_quote, [], line_to_block(string:strip(T, left))};
+line_to_block([]) -> {empty, [], []};
+line_to_block(T) -> {paragraph, [], T}.
 
 markdown_test() ->
-    ?assertEqual({ok, [{par, [{normal, "testpar"}]}]}, markdown("testpar")),
-    ?assertEqual({ok, [{par, [{normal, "testpar"}]}, {par, [{normal, "nextpar"}]}]}, markdown("testpar\n\nnextpar")).
+    ?assertEqual({ok, {document, [], {paragraph, [], "testpar"}}}, markdown("testpar")),
+    ?assertEqual(
+        {ok, {document, [{paragraph, [], "testpar"}], {paragraph, [], "nextpar"}}},
+        markdown("testpar\n\nnextpar")).
     % ?assertEqual(
     %     {ok, [
-    %         {par, [{bold, "bold text"}, {normal, "normal text"}, {italic, "italic"}]},
-    %         {par, "nextpar"}
+    %         {par, [{emph, "bold text"}, {str, "normal text"}]},
+    %         {par, [{str, "nextpar"}]}
     %     ]},
     %     markdown(
-    %         "**bold text** normal text _italic_\n\n"
-    %         "# heading in next par"
+    %         "**bold text** normal text\n\n"
+    %         "nextpar"
     %     )).
 
-partial_test() ->
+
+parse_doc_test() ->
     ?assertEqual(
-        [{par, [{normal, "testpar"}]}],
-        to_paragraphs("testpar")),
+        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}}},
+        parse_into_blocks("> Lorem ipsum dolor \nsit amet.")).
+
+line_type_test() ->
     ?assertEqual(
-        [{par, [{normal, "testpar"}]}, {par, [{normal, "nextpar"}]}, {par, [{normal, "thirdpar"}]}],
-        to_paragraphs("testpar\n\nnextpar\n\nthirdpar")).
+        {block_quote, [], {paragraph, [], "Lorem ipsum dolor \nsit amet."}},
+        line_to_block("> Lorem ipsum dolor \nsit amet.")).
+
+merge_blocks_test() ->
+    ?assertEqual(
+        {paragraph, [], "Lorem ipsum dolor sit amet."},
+        merge_blocks(
+            {paragraph, [], "Lorem ipsum dolor"},
+            {paragraph, [], " sit amet."}
+            )),
+    ?assertEqual(
+        {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}},
+        merge_blocks(
+            {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}},
+            {paragraph, [], " sit amet."}
+            )),
+    ?assertEqual(
+        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}}},
+        merge_blocks(
+            {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}}},
+            {block_quote, [], {paragraph, [], " sit amet."}}
+            )),
+    ?assertEqual(
+        {document, [],
+            {block_quote, [{paragraph, [], "Lorem ipsum dolor"}],
+                {bullet_list, [],
+                    {list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}}}},
+        merge_blocks(
+            {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}}},
+            {block_quote, [], {bullet_list, [], {list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}}}
+            )).
