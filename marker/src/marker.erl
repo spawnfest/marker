@@ -77,7 +77,7 @@ merge_blocks(
 merge_blocks(
     {paragraph, ClosedA, OpenA},
     {paragraph, _, OpenB}) ->
-        {paragraph, ClosedA, OpenA ++ OpenB};
+        {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
 
 merge_blocks(
     {TypeA, ClosedA, OpenA},
