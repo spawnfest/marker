@@ -2,10 +2,14 @@
   <h1><%= gettext "Welcome to %{name}!", name: "Marker" %></h1>
   <h3>Enter Markdown text below</h3>
   <form phx-change="to_html" phx-submit="to_html">
-    <textarea name="m" value="<%= @markdown %>" placeholder="Markdown document"></textarea>
+    <textarea name="m" placeholder="Markdown document"></textarea>
   </form>
 
-</section>
-<section>
+
   <%= inspect(@result) %>
+
+  <hr>
+
+  <h3>Rendered Markdown</h3>
+  <%= @rendered_markdown %>
 </section>
