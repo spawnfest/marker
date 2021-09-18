@@ -21,5 +21,5 @@ jobs:
       run: rebar3 compile
       working-directory: ./marker
     - name: Run tests
-      run: rebar3 do eunit, ct
+      run: rebar3 do eunit
       working-directory: ./marker
