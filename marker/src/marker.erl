@@ -123,19 +123,18 @@ markdown_test() ->
 "> - aliquando id")),
     ?assertEqual(
         {ok, {document, [],
-            {block_quote, [{paragraph, [], "Lorem ipsum dolor sit amet."}],
+            {block_quote, [{paragraph, [], "Lorem ipsum dolor\nsit amet."}],
                 {bullet_list, [{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}}},
-        markdown(
-"> Lorem ipsum dolor\n"
-" sit amet.\n"
-"> - Qui *quodsi iracundia*\n"
-"> - aliquando id")).
+        markdown("> Lorem ipsum dolor\n"
+                 "sit amet.\n"
+                 "> - Qui *quodsi iracundia*\n"
+                 "> - aliquando id")).
 
 
 parse_doc_test() ->
     ?assertEqual(
-        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}}},
+        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor \nsit amet."}}},
         parse_into_blocks("> Lorem ipsum dolor \nsit amet.")).
 
 line_type_test() ->
@@ -151,19 +150,19 @@ line_type_test() ->
 
 merge_blocks_test() ->
     ?assertEqual(
-        {paragraph, [], "Lorem ipsum dolor sit amet."},
+        {paragraph, [], "Lorem ipsum dolor\n sit amet."},
         merge_blocks(
             {paragraph, [], "Lorem ipsum dolor"},
             {paragraph, [], " sit amet."}
             )),
     ?assertEqual(
-        {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}},
+        {block_quote, [], {paragraph, [], "Lorem ipsum dolor\n sit amet."}},
         merge_blocks(
             {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}},
             {paragraph, [], " sit amet."}
             )),
     ?assertEqual(
-        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor sit amet."}}},
+        {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor\n sit amet."}}},
         merge_blocks(
             {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}}},
             {block_quote, [], {paragraph, [], " sit amet."}}
