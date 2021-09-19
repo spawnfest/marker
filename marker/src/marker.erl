@@ -152,7 +152,7 @@ line_to_block("-" ++ T) ->
 
 %% Headings
 line_to_block("###### " ++ T) ->
-    {heading6, [line_to_block(string:strip(T, left))]};
+    {heading6, [], line_to_block(string:strip(T, left))};
 
 line_to_block("##### " ++ T) ->
     {heading5, [], line_to_block(string:strip(T, left))};
@@ -208,7 +208,7 @@ block_to_string_test() ->
       ).
 
 heading_tags() ->
-  [heading1, heading2, heading3, heading3, heading4, heading5, heading6].
+  [heading1, heading2, heading3, heading4, heading5, heading6].
 
 %% close/1 transforms parsing tree from the phase 1 of the CommonMark
 %% parsing approach by "closing" all the blocks. It goes through all the parsing
