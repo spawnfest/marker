@@ -131,7 +131,21 @@ block_to_string_test() ->
 %%      proper representation, i.e. formatting elements like emph and italic.
 %%   4. Returns transformed tree that is ready for rendering by render module.
 parse_inlines(T) ->
-    T.
+    Closed = close(T),
+    transform_tree_inlines(Closed).
+
+%% transform_tree_inlines traverse the parsing tree of closed blocks
+%% and converts inline elements - paragraphs and headings - into style elements
+%% like str, emph or italic.
+transform_tree_inlines(T={paragraph, _}) ->
+    parse_inline(T);
+transform_tree_inlines(T={Type, ClosedBlocks}) ->
+    {Type, lists:map(fun transform_tree_inlines/1, ClosedBlocks)}.
+
+parse_inlines_test() ->
+    ?assertEqual(
+        {document, [{paragraph, [{italic, "test"}, {str, " par "}, {emph, "agraph"}]}]},
+        parse_inlines({document, [], {paragraph, [], "*test* par **agraph**"}})).
 
 %% close/1 transforms parsing tree from the phase 1 of the CommonMark
 %% parsing approach by "closing" all the blocks. It goes through all the parsing
@@ -190,6 +204,11 @@ parse_inline({paragraph, T}) ->
 %%   * code
 %%   * softbreak
 %% TODO: support links and images.
+append_result(Rs, Type, []) ->
+    Rs;
+append_result(Rs, Type, R) ->
+    Rs ++ [{Type, R}].
+
 parse_inline_text([], _, _, [], Result) -> Result;
 parse_inline_text([], _, _, Buffer, Result) -> Result ++ [{str, Buffer}];
 parse_inline_text([42|T], N, Stack, Buffer, Result) ->
@@ -198,19 +217,19 @@ parse_inline_text([42|T], N, Stack, Buffer, Result) ->
             case  lists:keyfind(emph, 1, Stack) of
                 % there's no opener on the stack, add new one
                 false ->
-                    parse_inline_text(S, N+2, [{emph, N}|Stack], "", Result ++ [{str, Buffer}]);
+                    parse_inline_text(S, N+2, [{emph, N}|Stack], "", append_result(Result, str, Buffer));
                 % there was an opener on Pos position, add new emph element to result
                 {emph, _} ->
-                    parse_inline_text(S, N+2, lists:keydelete(emph, 1, Stack), "", Result ++ [{emph, Buffer}])
+                    parse_inline_text(S, N+2, lists:keydelete(emph, 1, Stack), "", append_result(Result, emph, Buffer))
             end;
         _ ->
             case  lists:keyfind(italic, 1, Stack) of
                 % there's no opener on the stack, add new one
                 false ->
-                    parse_inline_text(T, N+1, [{italic, N}|Stack], "", Result ++ [{str, Buffer}]);
+                    parse_inline_text(T, N+1, [{italic, N}|Stack], "", append_result(Result, str, Buffer));
                 % there was an opener on Pos position, add new italic element to result
                 {italic, _} ->
-                    parse_inline_text(T, N+1, lists:keydelete(italic, 1, Stack), "", Result ++ [{italic, Buffer}])
+                    parse_inline_text(T, N+1, lists:keydelete(italic, 1, Stack), "", append_result(Result, italic, Buffer))
             end
     end;
 parse_inline_text([H|T], N, Stack, Buffer, Result) ->
@@ -318,4 +337,7 @@ parse_inline_test() ->
     ?assertEqual(
         {paragraph, [{str, "Qui "}, {italic, "quodsi"}, {str, " "}, {emph, "iracundia"}]},
         parse_inline(
-            {paragraph, "Qui *quodsi* **iracundia**"})).
+            {paragraph, "Qui *quodsi* **iracundia**"})),
+    ?assertEqual(
+        {paragraph, [{italic, "test"}, {str, " par "}, {emph, "agraph"}]},
+        parse_inline({paragraph, "*test* par **agraph**"})).
