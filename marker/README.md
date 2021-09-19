@@ -58,10 +58,11 @@ Non-leaves, block elements:
 * `list_item` - rendered as `<li>`
 * `paragraph` - rendered as `<p>`
 * `soft_break` - rendred as `<br>`
+* `heading<1-6>` - rendered as `<h<1-6>>`
+* `code_fence` - rendered as `<pre>`, code block
 
 Leaves:
 * `inline_code` - rendered as `<code>`
 * `italic` - rendered as `<i>`
 * `emph` - rendered as `<b>`
-* `heading<1-6>` - rendered as `<h<1-6>>`
 * `str` - rendered as regular text
