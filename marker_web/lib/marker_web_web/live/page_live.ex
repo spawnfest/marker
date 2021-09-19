@@ -4,7 +4,16 @@ defmodule MarkerWebWeb.PageLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, markdown: nil, result: nil, preview_hidden: true)}
+    {
+      :ok,
+      assign(
+        socket,
+        markdown: nil,
+        result: nil,
+        generated_html: nil,
+        preview_hidden: true
+      )
+    }
   end
 
   @impl true
