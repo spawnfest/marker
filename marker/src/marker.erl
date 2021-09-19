@@ -121,6 +121,47 @@ block_to_string_test() ->
        block_to_string({document, [{paragraph,[],"foo"}], none})
       ).
 
+%% parse_inline implements the phase 2 of CommonMark parsing, i.e.
+%% converting the content of paragraphs and headings into
+%% a list of str, emph, italic etc. elements, ready to apply formatting
+%% in the render part.
+parse_inline({paragraph, T}) ->
+    {paragraph, parse_inline_text(T, 0, [], [], [])}.
+
+%% parse_inline_text reads the text T, goes through characters and produces
+%% the list of {<type>, <subseq>} pair with proper formatting, where
+%% <type> is one of:
+%%   * emph
+%%   * italic
+%%   * code
+%%   * softbreak
+%% TODO: support links and images.
+parse_inline_text([], _, _, [], Result) -> Result;
+parse_inline_text([], _, _, Buffer, Result) -> Result ++ [{str, Buffer}];
+parse_inline_text([42|T], N, Stack, Buffer, Result) ->
+    case T of
+        [42|S] ->
+            case  lists:keyfind(emph, 1, Stack) of
+                % there's no opener on the stack, add new one
+                false ->
+                    parse_inline_text(S, N+2, [{emph, N}|Stack], "", Result ++ [{str, Buffer}]);
+                % there was an opener on Pos position, add new emph element to result
+                {emph, _} ->
+                    parse_inline_text(S, N+2, lists:keydelete(emph, 1, Stack), "", Result ++ [{emph, Buffer}])
+            end;
+        _ ->
+            case  lists:keyfind(italic, 1, Stack) of
+                % there's no opener on the stack, add new one
+                false ->
+                    parse_inline_text(T, N+1, [{italic, N}|Stack], "", Result ++ [{str, Buffer}]);
+                % there was an opener on Pos position, add new italic element to result
+                {italic, _} ->
+                    parse_inline_text(T, N+1, lists:keydelete(italic, 1, Stack), "", Result ++ [{italic, Buffer}])
+            end
+    end;
+parse_inline_text([H|T], N, Stack, Buffer, Result) ->
+    parse_inline_text(T, N+1, Stack, Buffer ++ [H], Result).
+
 
 markdown_test() ->
     ?assertEqual({ok, {document, [], none}}, markdown("")),
@@ -210,3 +251,17 @@ merge_blocks_test() ->
                 {bullet_list, [],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}
             )).
+
+parse_inline_test() ->
+    ?assertEqual(
+        {paragraph, [{str, "aliquando id"}]},
+        parse_inline(
+            {paragraph, "aliquando id"})),
+    ?assertEqual(
+        {paragraph, [{str, "Qui "}, {italic, "quodsi iracundia"}]},
+        parse_inline(
+            {paragraph, "Qui *quodsi iracundia*"})),
+    ?assertEqual(
+        {paragraph, [{str, "Qui "}, {italic, "quodsi"}, {str, " "}, {emph, "iracundia"}]},
+        parse_inline(
+            {paragraph, "Qui *quodsi* **iracundia**"})).
