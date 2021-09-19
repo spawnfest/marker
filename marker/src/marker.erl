@@ -81,6 +81,16 @@ merge_blocks(
     {bullet_list, CloseBullets ++ [OpenItem], B};
 
 merge_blocks(
+  {ordered_list, CloseBullets, OpenItem},
+  {ordered_list, _, OpenB}) ->
+    {ordered_list, CloseBullets ++ [OpenItem], OpenB};
+
+merge_blocks(
+  {ordered_list, CloseBullets, OpenItem},
+  B = {list_item, _, _}) ->
+    {ordered_list, CloseBullets ++ [OpenItem], B};
+
+merge_blocks(
   {block_quote, ClosedA, OpenA},
   {block_quote, _, OpenB}) ->
     {block_quote, ClosedA, merge_blocks(OpenA, OpenB)};
@@ -178,12 +188,20 @@ line_to_block(M = "```" ++ T) ->
   end;
 
 
-%% List items
+%% Unordered list items
 line_to_block("- " ++ T) ->
   {bullet_list, [], {list_item, [], line_to_block(string:trim(T, leading))}};
 
 line_to_block("-" ++ T) ->
   {paragraph, [], "-" ++ T};
+
+
+%% Ordered list items
+line_to_block("1. " ++ T) ->
+  {ordered_list, [], {list_item, [], line_to_block(string:trim(T, leading))}};
+
+line_to_block("1." ++ T) ->
+  {paragraph, [], "1." ++ T};
 
 
 %% Headings

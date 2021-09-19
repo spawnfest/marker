@@ -49,11 +49,11 @@ Currenly `marker` (to some buggy extend) supports these Markdown elements:
 * horizontal rules
 * inline code excerpts
 * code blocks
+* ordered lists
 
 TBD:
 * links
 * images
-* ordered lists
 
 ## Authors
 

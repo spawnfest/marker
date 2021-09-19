@@ -19,6 +19,7 @@ tags() ->
       horizontal_line => #{open => "<hr />", close => ""},
       block_quote => #{open => "<blockquote>", close => "</blockquote>"},
       bullet_list => #{open => "<ul>", close => "</ul>"},
+      ordered_list => #{open => "<ol>", close => "</ol>"},
       list_item =>   #{open => "<li>", close => "</li>"},
       document =>    #{open => "<div>", close => "</div>"},
       soft_break =>  #{open => "", close => "<br />"}
