@@ -46,8 +46,7 @@ block_to_html({Type, ClosedBlocks, OpenBlock}) ->
 blocks_to_html([]) ->
     "";
 
-blocks_to_html([Block = {Type, _, _}|Rest]) ->
-    CloseTag = maps:get(close, maps:get(Type, tags())),
+blocks_to_html([Block = {_, _, _}|Rest]) ->
     block_to_html(Block) ++ blocks_to_html(Rest).
 
 block_to_html_test() ->

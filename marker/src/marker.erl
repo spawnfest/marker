@@ -71,7 +71,7 @@ merge_blocks(
   B = {paragraph, _, _}) ->
     {TypeA, ClosedA, merge_blocks(OpenA, B)};
 
-merge_blocks(A = {TypeA, ClosedA, none}, B) ->
+merge_blocks({TypeA, ClosedA, none}, B) ->
     {TypeA, ClosedA, B};
 
 merge_blocks(
