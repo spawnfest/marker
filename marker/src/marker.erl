@@ -13,6 +13,9 @@
 %%   * str
 %%   * paragraph
 %%   * bullet_list
+%%   * block_quote
+%%   * heading
+%%   * soft_break
 %%   * list_item
 %%   * italic
 %%   * emph
@@ -63,6 +66,11 @@ merge_blocks(
     {block_quote, ClosedA, merge_blocks(OpenA, OpenB)};
 
 merge_blocks(
+    {TypeA, ClosedA, OpenA = {heading, _, _}},
+    B) ->
+    {TypeA, ClosedA ++ [OpenA], B};
+
+merge_blocks(
   {paragraph, ClosedA, OpenA},
   {paragraph, _, OpenB}) ->
     {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
@@ -88,6 +96,8 @@ line_to_block([62|T]) ->
     {block_quote, [], line_to_block(string:strip(T, left))};
 line_to_block([45|T]) ->
     {bullet_list, [], {list_item, [], line_to_block(string:strip(T, left))}};
+line_to_block([35|T]) -> % TODO: implement different level of headings
+    {heading, [line_to_block(string:strip(T, left))], {soft_break, [], ""}};
 line_to_block([]) -> none;
 line_to_block(T) -> {paragraph, [], T}.
 
@@ -157,40 +167,14 @@ close(none) ->
     {paragraph, []}; % TODO: treat none as an empty string.
 close({paragraph, [], T}) ->
     {paragraph, T};
+close({soft_break, [], T}) ->
+    {soft_break, T};
 close([H|T]) ->
     [close(H)|close(T)];
 close({T, ClosedBlocks, OpenBlock}) ->
     ClosedOpenBlock = close(OpenBlock),
     ClosedChildren = lists:map(fun close/1, ClosedBlocks),
     {T, ClosedChildren ++ [ClosedOpenBlock]}.
-
-close_test() ->
-    ?assertEqual(
-        {paragraph, "par"},
-        close({paragraph, [], "par"})),
-    ?assertEqual(
-        {list_item, [{paragraph, "par"}]},
-        close({list_item, [], {paragraph, [], "par"}})),
-    ?assertEqual(
-        {document, [{paragraph, "testpar"}]},
-        close({document, [], {paragraph, [], "testpar"}})),
-    ?assertEqual(
-        {bullet_list,
-            [
-                {paragraph, "Qui *quodsi iracundia*"},
-                {paragraph, "aliquando id"}
-            ]},
-        close({bullet_list,
-                  [{paragraph, [], "Qui *quodsi iracundia*"}],
-                   {paragraph, [], "aliquando id"}})),
-    ?assertEqual(
-        {bullet_list,
-            [
-                {list_item, [{paragraph, "Qui *quodsi iracundia*"}]},
-                {list_item, [{paragraph, "aliquando id"}]}
-            ]},
-    close({bullet_list,[{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],{list_item, [], {paragraph, [], "aliquando id"}}})).
-
 
 %% parse_inline implements the phase 2 of CommonMark parsing, i.e.
 %% converting the content of paragraphs and headings into
@@ -299,6 +283,12 @@ merge_blocks_test() ->
             {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor"}}},
             {block_quote, [], {paragraph, [], " sit amet."}}
             )),
+     ?assertEqual(
+        {document, [{heading, [], {paragraph, [], "Lorem ipsum dolor"}}], {paragraph, [], " sit amet."}},
+        merge_blocks(
+            {document, [], {heading, [], {paragraph, [], "Lorem ipsum dolor"}}},
+            {paragraph, [], " sit amet."}
+            )),
     ?assertEqual(
         {document, [],
             {block_quote, [{paragraph, [], "Lorem ipsum dolor"}],
@@ -327,6 +317,36 @@ merge_blocks_test() ->
                 {bullet_list, [],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}
             )).
+
+
+close_test() ->
+    ?assertEqual(
+        {paragraph, "par"},
+        close({paragraph, [], "par"})),
+    ?assertEqual(
+        {list_item, [{paragraph, "par"}]},
+        close({list_item, [], {paragraph, [], "par"}})),
+    ?assertEqual(
+        {document, [{paragraph, "testpar"}]},
+        close({document, [], {paragraph, [], "testpar"}})),
+    ?assertEqual(
+        {bullet_list,
+            [
+                {paragraph, "Qui *quodsi iracundia*"},
+                {paragraph, "aliquando id"}
+            ]},
+        close({bullet_list,
+                  [{paragraph, [], "Qui *quodsi iracundia*"}],
+                   {paragraph, [], "aliquando id"}})),
+    ?assertEqual(
+        {bullet_list,
+            [
+                {list_item, [{paragraph, "Qui *quodsi iracundia*"}]},
+                {list_item, [{paragraph, "aliquando id"}]}
+            ]},
+    close({bullet_list,[{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],{list_item, [], {paragraph, [], "aliquando id"}}})).
+
+
 
 parse_inline_test() ->
     ?assertEqual(

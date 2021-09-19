@@ -7,11 +7,13 @@
 
 tags() ->
     #{
+      heading =>   #{open => "<h2>", close => "</h2>"},
       paragraph =>   #{open => "<p>", close => "</p>"},
       block_quote => #{open => "<blockquote>", close => "</blockquote>"},
       bullet_list => #{open => "<ul>", close => "</ul>"},
       list_item =>   #{open => "<li>", close => "</li>"},
-      document =>    #{open => "<div>", close => "</div>"}
+      document =>    #{open => "<div>", close => "</div>"},
+      soft_break =>  #{open => "", close => "<br />"}
      }.
 
 html({str, Text}) ->
