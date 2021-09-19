@@ -6,7 +6,7 @@ build: ## Builds library source with rebar3
 	rebar3 compile
 
 .PHONY: run
-Run: ## Runs marker_web server.
+run: ## Runs marker_web server.
 	mix phx.server
 
 .PHONY: help
