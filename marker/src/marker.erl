@@ -77,6 +77,11 @@ merge_blocks(
     {TypeA, ClosedA ++ [OpenA], B};
 
 merge_blocks(
+    {TypeA, ClosedA, OpenA = {horizontal_line, _, _}},
+    B) ->
+    {TypeA, ClosedA ++ [OpenA], B};
+
+merge_blocks(
   {paragraph, ClosedA, OpenA},
   {paragraph, _, OpenB}) ->
     {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
@@ -117,28 +122,28 @@ line_to_block(">" ++ T) ->
     {block_quote, [], line_to_block(string:trim(T, leading))};
 
 %% Thematic breaks
-line_to_block(M = "___" ++ T) ->
+line_to_block(Line = "___" ++ T) ->
   case string:trim(T) of
     [] ->
       {horizontal_line, [], none};
     _ ->
-      {paragraph, [], M ++ T}
+      {paragraph, [], Line}
   end;
 
-line_to_block(M = "***" ++ T) ->
+line_to_block(Line = "***" ++ T) ->
   case string:trim(T) of
     [] ->
       {horizontal_line, [], none};
     _ ->
-      {paragraph, [], M ++ T}
+      {paragraph, [], Line}
   end;
 
-line_to_block(M = "---" ++ T) ->
+line_to_block(Line = "---" ++ T) ->
   case string:trim(T) of
     [] ->
       {horizontal_line, [], none};
     _ ->
-      {paragraph, [], M ++ T}
+      {paragraph, [], Line}
   end;
 
 
