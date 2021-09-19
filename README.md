@@ -10,6 +10,15 @@ for parsing and rendering
 * web demo in `marker-web/` directory presenting the way Markdown documents
 are parsed (for e.g. debugging) and rendered into HTML.
 
+## How to run it?
+
+As the `marker` is a library, it cannot be run on its own, but the build/test
+instructions can be found under `marker/` directory in its `README.md` file.
+
+The demo project, `marker_web` is built in Elixir, uses Phoenix and can be run using
+`mix phx.server` command. Detailed instructions, as above, can be found
+in the `marker_web/` directory.
+
 ## How does it work?
 
 The library, `marker` is build with a focus on the [CommonMark specification](https://commonmark.org/)
