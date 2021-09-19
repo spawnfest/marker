@@ -28,6 +28,8 @@ html({italic, Text}) ->
     "<i>" ++ Text ++ "</i>";
 html({emph, Text}) ->
     "<b>" ++ Text ++ "</b>";
+html({code_fence, Text}) ->
+    "<pre>" ++ Text ++ "</pre>";
 html({Type, Blocks}) ->
     OpenTag = maps:get(open, maps:get(Type, tags())),
     CloseTag = maps:get(close, maps:get(Type, tags())),

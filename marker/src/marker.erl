@@ -15,6 +15,7 @@
 %%   * bullet_list
 %%   * horizontal_line
 %%   * block_quote
+%%   * code_fence
 %%   * inline_code
 %%   * heading
 %%   * soft_break
@@ -22,9 +23,9 @@
 %%   * italic
 %%   * emph
 %%   * link
-markdown(T)
-    -> {ok, parse_inlines( % phase 2
-        parse_into_blocks(T))}. % phase 1
+markdown(T) ->
+    Phase1Result = parse_into_blocks(T),
+    {ok, parse_inlines(Phase1Result)}.
 
 %% phase1/2 parses given string according to passed flavour.
 %% At the moment the only supported flavour for the time being is CommonMark.
@@ -38,17 +39,30 @@ phase1(T) ->
 %% dividing input text into blocks.
 %% Returns a list representing a document tree.
 parse_into_blocks(T)
-    -> parse_doc({document, [], none}, string:split(T, "\n", all)).
+  -> parse_doc({normal, {document, [], none}}, [], string:split(T, "\n", all)).
 
 %% parse_doc runs through all the lines and builds the document tree
 %% describe in phase 1 of the CommonMark algorithm. After blocks
 %% are separated, each can be formatted using inline rules for emphasis,
-%% italic or links.
-parse_doc(Document, [NextLine|T]) ->
-  Line = line_to_block(NextLine),
-  parse_doc(merge_blocks(Document, Line), T);
-
-parse_doc(Document, []) -> Document.
+%% italic or links. The first argument defines currently running mode
+%% (it's added to parse code blocks).
+parse_doc({normal, Document}, Buffer, [NextLine|T]) ->
+    Line = line_to_block(NextLine),
+    case Line of
+        {code_fence, _, _} -> % begin of code block
+            parse_doc({codeblock, Document}, [], T);
+        _ ->
+            parse_doc({normal, merge_blocks(Document, Line)}, Buffer, T)
+    end;
+parse_doc({codeblock, Document}, Buffer, [NextLine|T]) ->
+    Line = line_to_block(NextLine),
+    case line_to_block(NextLine) of
+        {code_fence, _, _} -> % end of code block
+            parse_doc({normal, merge_blocks(Document, {code_fence, [], Buffer})}, [], T);
+        _ ->
+            parse_doc({codeblock, Document}, Buffer ++ NextLine, T)
+    end;
+parse_doc({_, Document}, Buffer, []) -> Document.
 
 %% merge_blocks manages open and closed blocks, based on phase 1
 %% of the CommonMark algorithm.
@@ -70,6 +84,11 @@ merge_blocks(
   {block_quote, ClosedA, OpenA},
   {block_quote, _, OpenB}) ->
     {block_quote, ClosedA, merge_blocks(OpenA, OpenB)};
+
+merge_blocks(
+  {TypeA, ClosedA, OpenA = {code_fence, _, _}},
+  B) ->
+    {TypeA, ClosedA ++ [OpenA], B};
 
 merge_blocks(
     {TypeA, ClosedA, OpenA = {heading, _, _}},
@@ -100,6 +119,10 @@ merge_blocks(
       {TypeA, ClosedA, merge_blocks(OpenA, B)}
     end;
 
+merge_blocks(
+  {TypeA, ClosedA, OpenA = {TypeC, _, _}},
+  B = {code_fence, _, _}) ->
+      {TypeA, ClosedA++[OpenA], B};
 
 merge_blocks({TypeA, ClosedA, none}, B) ->
     {TypeA, ClosedA, B};
@@ -144,6 +167,14 @@ line_to_block(Line = "---" ++ T) ->
       {horizontal_line, [], none};
     _ ->
       {paragraph, [], Line}
+  end;
+
+line_to_block(M = "```" ++ T) ->
+  case string:trim(T) of
+    [] ->
+      {code_fence, [], ""};
+    _ ->
+      {paragraph, [], M ++ T}
   end;
 
 
@@ -226,6 +257,8 @@ close({paragraph, [], T}) ->
     {paragraph, T};
 close({soft_break, [], T}) ->
     {soft_break, T};
+close({code_fence, [], T}) ->
+    {code_fence, T};
 close([H|T]) ->
     [close(H)|close(T)];
 close({T, [], none}) ->
@@ -253,13 +286,18 @@ parse_inlines(T) ->
 %% like str, emph or italic.
 transform_tree_inlines(T={paragraph, _}) ->
     parse_inline(T);
+transform_tree_inlines({code_fence, T}) ->
+    {code_fence, T};
 transform_tree_inlines({Type, ClosedBlocks}) ->
     {Type, lists:map(fun transform_tree_inlines/1, ClosedBlocks)}.
 
 parse_inlines_test() ->
     ?assertEqual(
         {document, [{paragraph, [{italic, "test"}, {str, " par "}, {emph, "agraph"}]}]},
-        parse_inlines({document, [], {paragraph, [], "*test* par **agraph**"}})).
+        parse_inlines({document, [], {paragraph, [], "*test* par **agraph**"}})),
+    ?assertEqual(
+        {document, [{code_fence, ""}]},
+        parse_inlines({document,[], {code_fence, [], ""}})).
 
 %% parse_inline implements the phase 2 of CommonMark parsing, i.e.
 %% converting the content of paragraphs and headings into
@@ -328,6 +366,11 @@ parse_inline_text([42|T], N, Stack, Buffer, Result) ->
 parse_inline_text([H|T], N, Stack, Buffer, Result) ->
     parse_inline_text(T, N+1, Stack, Buffer ++ [H], Result).
 
+markdown_test() ->
+    ?assertEqual({ok, {document, [{code_fence, "code"}]}}, markdown("```\ncode\n```")),
+    ?assertEqual(
+        {ok, {document, [{code_fence, "dsada"}, {paragraph, [{str, "d"}]}]}},
+        markdown("```\ndsada\n```\nd")).
 
 phase1_test() ->
     ?assertEqual({ok, {document, [], none}}, phase1("")),
@@ -369,10 +412,16 @@ phase1_test() ->
 
     ?assertEqual({ok, {document,[{heading1,[],{paragraph,[],"Foo"}}],{heading1,[],{paragraph,[],"Bar"}}}}, phase1("# Foo\n# Bar\n")).
 
-parse_doc_test() ->
+parse_into_blocks_test() ->
     ?assertEqual(
         {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor \nsit amet."}}},
-        parse_into_blocks("> Lorem ipsum dolor \nsit amet.")).
+        parse_into_blocks("> Lorem ipsum dolor \nsit amet.")),
+    ?assertEqual(
+        {document, [], {code_fence, [], "code"}},
+        parse_into_blocks("```\ncode\n```")),
+    ?assertEqual(
+        {document, [{code_fence, [], "code"}], {paragraph, [], "d"}},
+        parse_into_blocks("```\ncode\n```\nd")).
 
 line_to_block_test() ->
     ?assertEqual(
@@ -398,7 +447,11 @@ line_to_block_test() ->
 
     ?assertEqual(
        {paragraph, [], "-Foo"},
-       line_to_block("-Foo")).
+       line_to_block("-Foo")),
+
+    ?assertEqual(
+       {code_fence, [], ""},
+       line_to_block("```")).
 
 merge_blocks_test() ->
     ?assertEqual(
@@ -455,9 +508,18 @@ merge_blocks_test() ->
             )),
 
     ?assertEqual(
-       {document,[{heading1,[],{paragraph,[],"foo"}}], {heading1,[],{paragraph,[],"Bar"}}},
-       merge_blocks({document, [], {heading1, [], {paragraph, [], "foo"}}},
-                    {heading1, [], {paragraph, [],  "Bar"}})).
+        {document,[{heading1,[],{paragraph,[],"foo"}}], {heading1,[],{paragraph,[],"Bar"}}},
+        merge_blocks({document, [], {heading1, [], {paragraph, [], "foo"}}},
+                    {heading1, [], {paragraph, [],  "Bar"}})),
+    ?assertEqual(
+        {document,[], {code_fence, [], ""}},
+        merge_blocks({document, [], none},
+                    {code_fence, [], ""})),
+
+    ?assertEqual(
+        {document, [{code_fence, [], "code"}], {paragraph, [], "par"}},
+        merge_blocks({document, [], {code_fence, [], "code"}},
+                    {paragraph, [], "par"})).
 
 
 close_test() ->
@@ -485,7 +547,10 @@ close_test() ->
                 {list_item, [{paragraph, "Qui *quodsi iracundia*"}]},
                 {list_item, [{paragraph, "aliquando id"}]}
             ]},
-    close({bullet_list,[{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],{list_item, [], {paragraph, [], "aliquando id"}}})).
+        close({bullet_list,[{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],{list_item, [], {paragraph, [], "aliquando id"}}})),
+    ?assertEqual(
+        {document, [{code_fence, ""}]},
+        close({document, [], {code_fence, [], ""}})).
 
 
 
