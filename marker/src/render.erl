@@ -9,6 +9,7 @@ tags() ->
     #{
       heading =>   #{open => "<h2>", close => "</h2>"},
       paragraph =>   #{open => "<p>", close => "</p>"},
+      horizontal_line => #{open => "<hr />", close => ""},
       block_quote => #{open => "<blockquote>", close => "</blockquote>"},
       bullet_list => #{open => "<ul>", close => "</ul>"},
       list_item =>   #{open => "<li>", close => "</li>"},

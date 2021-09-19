@@ -13,6 +13,7 @@
 %%   * str
 %%   * paragraph
 %%   * bullet_list
+%%   * horizontal_line
 %%   * block_quote
 %%   * inline_code
 %%   * heading
@@ -95,8 +96,13 @@ merge_blocks({TypeA, ClosedA, OpenA}, B) ->
 
 line_to_block([62|T]) ->
     {block_quote, [], line_to_block(string:strip(T, left))};
-line_to_block([45|T]) ->
-    {bullet_list, [], {list_item, [], line_to_block(string:strip(T, left))}};
+line_to_block(S=[45|T]) ->
+    case string:prefix(S, "---") of
+        nomatch ->
+            {bullet_list, [], {list_item, [], line_to_block(string:strip(T, left))}};
+        _ ->
+            {horizontal_line, [], none}
+    end;
 line_to_block([35|T]) -> % TODO: implement different level of headings
     {heading, [line_to_block(string:strip(T, left))], {soft_break, [], ""}};
 line_to_block([]) -> none;
@@ -169,7 +175,7 @@ parse_inlines(T) ->
 %% like str, emph or italic.
 transform_tree_inlines(T={paragraph, _}) ->
     parse_inline(T);
-transform_tree_inlines(T={Type, ClosedBlocks}) ->
+transform_tree_inlines({Type, ClosedBlocks}) ->
     {Type, lists:map(fun transform_tree_inlines/1, ClosedBlocks)}.
 
 parse_inlines_test() ->
@@ -192,7 +198,7 @@ parse_inline({paragraph, T}) ->
 %%   * inline_code
 %%   * soft_break
 %% TODO: support links and images.
-append_result(Rs, Type, []) ->
+append_result(Rs, _, []) ->
     Rs;
 append_result(Rs, Type, R) ->
     Rs ++ [{Type, R}].
@@ -267,7 +273,12 @@ phase1_test() ->
         phase1("> Lorem ipsum dolor\n"
                  "sit amet.\n"
                  "> - Qui *quodsi iracundia*\n"
-                 "> - aliquando id")).
+                 "> - aliquando id")),
+    ?assertEqual(
+        {ok, {document,
+            [{paragraph, [], "testpar"}, {horizontal_line, [], none}],
+            {heading, [{paragraph, [], "header"}], {soft_break, [], []}}}},
+        phase1("testpar\n---\n# header")).
 
 
 parse_doc_test() ->
@@ -275,7 +286,7 @@ parse_doc_test() ->
         {document, [], {block_quote, [], {paragraph, [], "Lorem ipsum dolor \nsit amet."}}},
         parse_into_blocks("> Lorem ipsum dolor \nsit amet.")).
 
-line_type_test() ->
+line_to_block_test() ->
     ?assertEqual(
         {block_quote, [], {paragraph, [], "Lorem ipsum dolor \nsit amet."}},
         line_to_block("> Lorem ipsum dolor \nsit amet.")),
@@ -284,7 +295,10 @@ line_type_test() ->
             {bullet_list, [],
                 {list_item, [],
                     {paragraph, [], "Qui *quodsi iracundia*"}}}},
-        line_to_block("> - Qui *quodsi iracundia*")).
+        line_to_block("> - Qui *quodsi iracundia*")),
+    ?assertEqual(
+        {horizontal_line, [], none},
+        line_to_block("---")).
 
 merge_blocks_test() ->
     ?assertEqual(
