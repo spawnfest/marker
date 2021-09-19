@@ -14,6 +14,7 @@
 %%   * paragraph
 %%   * bullet_list
 %%   * block_quote
+%%   * inline_code
 %%   * heading
 %%   * soft_break
 %%   * list_item
@@ -188,16 +189,37 @@ parse_inline({paragraph, T}) ->
 %% <type> is one of:
 %%   * emph
 %%   * italic
-%%   * code
-%%   * softbreak
+%%   * inline_code
+%%   * soft_break
 %% TODO: support links and images.
 append_result(Rs, Type, []) ->
     Rs;
 append_result(Rs, Type, R) ->
     Rs ++ [{Type, R}].
 
+%% parse_inline_text goes through text and collects different formattings
+%% inside Result list.
+%% It accepts:
+%%   * text left to be parsed
+%%   * index of the current character
+%%   * stack of formatting openers like '*'. '**', '`' etc.
+%%     (TODO: fix openers removal, currently
+%%   * buffer, i.e. text collected to be formatted with the next formatter
+%%   * resulting list of pairs {<type>, <text>}
+%% TODO: generalize opener/closer cases
 parse_inline_text([], _, _, [], Result) -> Result;
 parse_inline_text([], _, _, Buffer, Result) -> Result ++ [{str, Buffer}];
+%% inline code
+parse_inline_text([96|T], N, Stack, Buffer, Result) ->
+    case  lists:keyfind(inline_code, 1, Stack) of
+        % there's no opener on the stack, add new one
+        false ->
+            parse_inline_text(T, N+1, [{inline_code, N}|Stack], "", append_result(Result, str, Buffer));
+        % there was an opener on Pos position, add new italic element to result
+        {inline_code, _} ->
+            parse_inline_text(T, N+1, lists:keydelete(inline_code, 1, Stack), "", append_result(Result, inline_code, Buffer))
+    end;
+%% emphasis
 parse_inline_text([42|T], N, Stack, Buffer, Result) ->
     case T of
         [42|S] ->
