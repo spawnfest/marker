@@ -81,13 +81,28 @@ merge_blocks(
   {paragraph, _, OpenB}) ->
     {paragraph, ClosedA, OpenA ++ "\n" ++ OpenB};
 
+%% If the open block of A is a heading type
+%% An B is a type of paragraph
+%% Then merging those should close the heading of A
+%% Otherwise the blocks are passed to merge_blocks
 merge_blocks(
-  {TypeA, ClosedA, OpenA},
+  {TypeA, ClosedA, OpenA = {TypeC, _, _}},
   B = {paragraph, _, _}) ->
-    {TypeA, ClosedA, merge_blocks(OpenA, B)};
+    case lists:member(TypeC, heading_tags()) of
+      true ->
+        {TypeA, ClosedA ++ [OpenA], B};
+      false ->
+      {TypeA, ClosedA, merge_blocks(OpenA, B)}
+    end;
+
 
 merge_blocks({TypeA, ClosedA, none}, B) ->
     {TypeA, ClosedA, B};
+
+merge_blocks(
+  {TypeA, ClosedA, OpenA = {heading1, _, _}},
+  B = {heading1, _, _}) ->
+    {TypeA, ClosedA ++ [OpenA], B};
 
 merge_blocks(
   {TypeA, ClosedA, OpenA = {Type, _, _}},
