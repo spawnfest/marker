@@ -122,6 +122,17 @@ block_to_string_test() ->
       ).
 
 
+%% parse_inlines implements the whole process of the phase 2 of CommonMark
+%% parsing. It takes as input the tree of blocks from the phase 1
+%% (parse_into_blocks function) and:
+%%   1. Closes all the created blocks on all levels, starting from the root.
+%%   2. Walks the tree top to bottom.
+%%   3. Replaces inline elements - paragraphs and (TODO) headings - with their
+%%      proper representation, i.e. formatting elements like emph and italic.
+%%   4. Returns transformed tree that is ready for rendering by render module.
+parse_inlines(T) ->
+    T.
+
 %% close/1 transforms parsing tree from the phase 1 of the CommonMark
 %% parsing approach by "closing" all the blocks. It goes through all the parsing
 %% tree and moves currently open block to the closed blocks list and drops
