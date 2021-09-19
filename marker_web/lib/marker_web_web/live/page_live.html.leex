@@ -4,8 +4,21 @@
   <form phx-change="to_html" phx-update="ignore">
     <textarea name="m" placeholder="Start typing some Markdown here..."></textarea>
   </form>
+  <h4>Try copying this:</h4>
+  <pre style="white-space: pre-line">
+  ### header, up to 6 '#'
+  - unordered list, **bold**, *italic*
+  1. ordered list, `inline code`
+  1. ordered list
+  ```
+  code block
+  ```
+  horizontal rule below
+  ---
+  > blockquote
+  </pre>
 
-  <h3>Rendered Markdown</h3>
+  <h3>Rendered HTML</h3>
   <div class="output-container">
     <%= raw(@generated_html) %>
   </div>
