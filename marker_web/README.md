@@ -13,4 +13,9 @@ To start the `marker_web`:
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 The site contains a text area, where you can write Markdown documents,
-which will get transformed into a HTML displayed below. Enjoy!
+which will get transformed into a HTML displayed below. 
+
+**Note**: be sure to check the _"Show debug preview"_ checkbox to get
+an insight into the parsing/rendering process.
+
+Enjoy 😁!
