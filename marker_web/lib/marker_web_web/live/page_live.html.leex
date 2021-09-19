@@ -1,46 +1,26 @@
 <div class="wrapper">
-  <h1><%= gettext "Welcome to %{name}!", name: "Marker" %></h1>
+  <h1>Welcome to Marker!</h1>
   <h3>Enter Markdown text below</h3>
-  <form phx-change="to_html" phx-submit="to_html">
-    <textarea name="m" placeholder="Markdown document"></textarea>
+  <form phx-change="to_html" phx-update="ignore">
+    <textarea name="m" placeholder="Start typing some Markdown here..."></textarea>
   </form>
 
   <h3>Rendered Markdown</h3>
-  <div style="width: 500px; max-height: 500px">
-  <%= raw(@generated_html) %>
+  <div class="output-container">
+    <%= raw(@generated_html) %>
   </div>
 
-  <hr />
-
   <label>
-  <input phx-update="ignore" type="checkbox" onchange="toggleDebug(this)">Show debug preview</label>
-  <div class="debug-preview">
+    <input phx-update="ignore" type="checkbox" phx-click="toggle-preview" phx-value-state=<%= @preview_hidden %>>Show debug preview</label>
+  <div class="debug-preview <%= if @preview_hidden, do: 'hide' %>">
     <h3>Generated HTML</h3>
-    <div style="width: 500px; max-height: 500px">
-    <%= @generated_html %>
+    <div class="output-container">
+      <%= @generated_html %>
     </div>
 
-    <hr />
-
     <h3>Parsing Result</h3>
-    <div style="width: 500px; max-height: 500px">
-    <%= inspect(@result) %>
+    <div class="output-container">
+      <%= inspect(@result) %>
     </div>
   </div>
 </div>
-
-<script type="text/javascript">
- function toggleDebug(checkbox) {
-    var d = document.getElementsByClassName("debug-preview");
-    if (d.length === 0) return;
-    if (checkbox.checked) {
-      d[0].style.display = "block";
-    } else {
-      d[0].style.display = "none";
-    }
- }
-
- window.onload = function() {
-  document.getElementsByClassName("debug-preview")[0].style.display = 'none';
-};
-</script>
