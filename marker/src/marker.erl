@@ -132,6 +132,24 @@ block_to_string_test() ->
        block_to_string({document, [{paragraph,[],"foo"}], none})
       ).
 
+%% close/1 transforms parsing tree from the phase 1 of the CommonMark
+%% parsing approach by "closing" all the blocks. It goes through all the parsing
+%% tree and moves currently open block to the closed blocks list and drops
+%% the third element from the list, i.e.
+%%   {<type>, ClosedBlocks, OpenBlock} => {<type>, ClosedBlocks ++ [OpenBlock]}
+close(none) ->
+    {paragraph, []}; % TODO: treat none as an empty string.
+close({paragraph, [], T}) ->
+    {paragraph, T};
+close({soft_break, [], T}) ->
+    {soft_break, T};
+close([H|T]) ->
+    [close(H)|close(T)];
+close({T, ClosedBlocks, OpenBlock}) ->
+    ClosedOpenBlock = close(OpenBlock),
+    ClosedChildren = lists:map(fun close/1, ClosedBlocks),
+    {T, ClosedChildren ++ [ClosedOpenBlock]}.
+
 
 %% parse_inlines implements the whole process of the phase 2 of CommonMark
 %% parsing. It takes as input the tree of blocks from the phase 1
@@ -157,24 +175,6 @@ parse_inlines_test() ->
     ?assertEqual(
         {document, [{paragraph, [{italic, "test"}, {str, " par "}, {emph, "agraph"}]}]},
         parse_inlines({document, [], {paragraph, [], "*test* par **agraph**"}})).
-
-%% close/1 transforms parsing tree from the phase 1 of the CommonMark
-%% parsing approach by "closing" all the blocks. It goes through all the parsing
-%% tree and moves currently open block to the closed blocks list and drops
-%% the third element from the list, i.e.
-%%   {<type>, ClosedBlocks, OpenBlock} => {<type>, ClosedBlocks ++ [OpenBlock]}
-close(none) ->
-    {paragraph, []}; % TODO: treat none as an empty string.
-close({paragraph, [], T}) ->
-    {paragraph, T};
-close({soft_break, [], T}) ->
-    {soft_break, T};
-close([H|T]) ->
-    [close(H)|close(T)];
-close({T, ClosedBlocks, OpenBlock}) ->
-    ClosedOpenBlock = close(OpenBlock),
-    ClosedChildren = lists:map(fun close/1, ClosedBlocks),
-    {T, ClosedChildren ++ [ClosedOpenBlock]}.
 
 %% parse_inline implements the phase 2 of CommonMark parsing, i.e.
 %% converting the content of paragraphs and headings into
