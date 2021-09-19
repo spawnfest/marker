@@ -1,4 +1,4 @@
-# Marker
+# Marker [![Erlang CI](https://github.com/spawnfest/marker/actions/workflows/erlang.yml/badge.svg)](https://github.com/spawnfest/marker/actions/workflows/erlang.yml)
 
 Marker is Erlang Markdown library, including parser and renderer.
 The project has been created during the SpawnFest 2021 hackathon and consists of
