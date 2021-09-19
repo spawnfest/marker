@@ -45,12 +45,16 @@ parse_into_blocks(T)
 %% are separated, each can be formatted using inline rules for emphasis,
 %% italic or links.
 parse_doc(Document, [NextLine|T]) ->
-    parse_doc(merge_blocks(Document, line_to_block(NextLine)), T);
+  Line = line_to_block(NextLine),
+  parse_doc(merge_blocks(Document, Line), T);
+
 parse_doc(Document, []) -> Document.
 
 %% merge_blocks manages open and closed blocks, based on phase 1
 %% of the CommonMark algorithm.
-merge_blocks(none, X) -> X;
+merge_blocks(none, B) -> B;
+
+merge_blocks(A, none) -> A;
 
 merge_blocks(
   {bullet_list, CloseBullets, OpenItem},
@@ -274,12 +278,18 @@ phase1_test() ->
                  "sit amet.\n"
                  "> - Qui *quodsi iracundia*\n"
                  "> - aliquando id")),
+
     ?assertEqual(
         {ok, {document,
-            [{paragraph, [], "testpar"}, {horizontal_line, [], none}],
-            {heading, [{paragraph, [], "header"}], {soft_break, [], []}}}},
-        phase1("testpar\n---\n# header")).
+              [{paragraph, [], "testpar"}, {horizontal_line, [], none}],
+              {heading1, [], {paragraph, [], "header"}}}},
+        phase1("testpar\n---\n# header")),
 
+    ?assertEqual({ok, {document, [], {paragraph, [], "#Foo"}}}, phase1("#Foo\n")),
+
+    ?assertEqual({ok, {document,[],{heading1,[],{paragraph,[],"Foo"}}}}, phase1("# Foo\n")),
+
+    ?assertEqual({ok, {document,[{heading1,[],{paragraph,[],"Foo"}}],{heading1,[],{paragraph,[],"Bar"}}}}, phase1("# Foo\n# Bar\n")).
 
 parse_doc_test() ->
     ?assertEqual(
@@ -298,7 +308,19 @@ line_to_block_test() ->
         line_to_block("> - Qui *quodsi iracundia*")),
     ?assertEqual(
         {horizontal_line, [], none},
-        line_to_block("---")).
+        line_to_block("---")),
+
+    ?assertEqual(
+       {heading1, [], {paragraph, [], "Foo"}},
+       line_to_block("# Foo")),
+
+    ?assertEqual(
+       {paragraph, [], "#Foo"},
+       line_to_block("#Foo")),
+
+    ?assertEqual(
+       {paragraph, [], "-Foo"},
+       line_to_block("-Foo")).
 
 merge_blocks_test() ->
     ?assertEqual(
@@ -352,7 +374,12 @@ merge_blocks_test() ->
             {block_quote, [],
                 {bullet_list, [],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}
-            )).
+            )),
+
+    ?assertEqual(
+       {document,[{heading1,[],{paragraph,[],"foo"}}], {heading1,[],{paragraph,[],"Bar"}}},
+       merge_blocks({document, [], {heading1, [], {paragraph, [], "foo"}}},
+                    {heading1, [], {paragraph, [],  "Bar"}})).
 
 
 close_test() ->
