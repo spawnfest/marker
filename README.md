@@ -48,6 +48,12 @@ Currenly `marker` (to some buggy extend) supports these Markdown elements:
 * unordered lists
 * horizontal rules
 * inline code excerpts
+* code blocks
+
+TBD:
+* links
+* images
+* ordered lists
 
 ## Authors
 
