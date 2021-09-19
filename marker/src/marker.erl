@@ -9,63 +9,78 @@
 %% markdown/1 parses given string and returns a (possibly nested) list
 %% describing the CommonMark (default flavour) document's structure.
 %%
+%% The tree returned by the markdown/1 function has a regular recursive
+%% structure with text elements as leaves. Each element may be in either
+%% this form for non-leaves:
+%%   {<type_atom>, [<child_element>,...]}
+%% or this - leaves:
+%%   {<type_atom>, <text>}
+%%
 %% Possible types of the elements:
-%%   * str
 %%   * paragraph
 %%   * bullet_list
+%%   * ordered_list
 %%   * horizontal_line
 %%   * block_quote
 %%   * code_fence
 %%   * inline_code
+%%   * code_fence
 %%   * heading
 %%   * soft_break
 %%   * list_item
 %%   * italic
+%%   * str
 %%   * emph
 %%   * link
 markdown(T) ->
     Phase1Result = parse_into_blocks(T),
-    {ok, parse_inlines(Phase1Result)}.
+    {ok, parse_inlines(Phase1Result)}. % phase 2
 
 %% phase1/2 parses given string according to passed flavour.
-%% At the moment the only supported flavour for the time being is CommonMark.
+%% At the moment the only supported flavour for the time being is CommonMark,
+%% so the second argument is ignored.
 phase1(T, _)
     -> phase1(T).
 
 phase1(T) ->
     {ok, parse_into_blocks(T)}.
 
-%% parse_blocks implements the first phase of CommonMark parsing strategy,
+%% parse_into_blocks/1 implements the first phase of CommonMark parsing strategy,
 %% dividing input text into blocks.
-%% Returns a list representing a document tree.
+%%
+%% Returns a tuple representing a document tree, with {document, ...} as root.
 parse_into_blocks(T)
   -> parse_doc({normal, {document, [], none}}, [], string:split(T, "\n", all)).
 
-%% parse_doc runs through all the lines and builds the document tree
-%% describe in phase 1 of the CommonMark algorithm. After blocks
+%% parse_doc/3 runs through all the lines and builds the document tree
+%% described in phase 1 of the CommonMark algorithm. After blocks
 %% are separated, each can be formatted using inline rules for emphasis,
-%% italic or links. The first argument defines currently running mode
-%% (it's added to parse code blocks).
+%% italic or links.
+%%
+%% The first argument defines currently running mode,
+%% it's added to simplify code blocks parsing.
 parse_doc({normal, Document}, Buffer, [NextLine|T]) ->
     Line = line_to_block(NextLine),
     case Line of
-        {code_fence, _, _} -> % begin of code block
+        {code_fence, _, _} -> % begin of code block, switch mode
             parse_doc({codeblock, Document}, [], T);
         _ ->
             parse_doc({normal, merge_blocks(Document, Line)}, Buffer, T)
     end;
 parse_doc({codeblock, Document}, Buffer, [NextLine|T]) ->
     Line = line_to_block(NextLine),
-    case line_to_block(NextLine) of
-        {code_fence, _, _} -> % end of code block
+    case Line of
+        % end of code block, get back to normal mode, store code block
+        {code_fence, _, _} ->
             parse_doc({normal, merge_blocks(Document, {code_fence, [], Buffer})}, [], T);
         _ ->
             parse_doc({codeblock, Document}, Buffer ++ NextLine, T)
     end;
-parse_doc({_, Document}, Buffer, []) -> Document.
+parse_doc({_, Document}, _, []) -> Document.
 
 %% merge_blocks manages open and closed blocks, based on phase 1
-%% of the CommonMark algorithm.
+%% of the CommonMark algorithm. It defines how the block from the read line
+%% should be incorportated into the parsing tree.
 merge_blocks(none, B) -> B;
 
 merge_blocks(A, none) -> A;
@@ -130,7 +145,7 @@ merge_blocks(
     end;
 
 merge_blocks(
-  {TypeA, ClosedA, OpenA = {TypeC, _, _}},
+  {TypeA, ClosedA, OpenA = {_, _, _}},
   B = {code_fence, _, _}) ->
       {TypeA, ClosedA++[OpenA], B};
 
@@ -150,7 +165,7 @@ merge_blocks(
 merge_blocks({TypeA, ClosedA, OpenA}, B) ->
     {TypeA, ClosedA ++ [OpenA], B}.
 
-
+%% line_to_block/1 defines the way read lines are transformed into blocks.
 line_to_block(">" ++ T) ->
     {block_quote, [], line_to_block(string:trim(T, leading))};
 
@@ -287,21 +302,21 @@ close({T, ClosedBlocks, OpenBlock}) ->
     {T, ClosedChildren ++ [ClosedOpenBlock]}.
 
 
-%% parse_inlines implements the whole process of the phase 2 of CommonMark
+%% parse_inlines/1 implements the whole process of the phase 2 of CommonMark
 %% parsing. It takes as input the tree of blocks from the phase 1
-%% (parse_into_blocks function) and:
+%% (parse_into_blocks/1 function) and:
 %%   1. Closes all the created blocks on all levels, starting from the root.
 %%   2. Walks the tree top to bottom.
-%%   3. Replaces inline elements - paragraphs and (TODO) headings - with their
+%%   3. Replaces inline elements - paragraphs and headings - with their
 %%      proper representation, i.e. formatting elements like emph and italic.
-%%   4. Returns transformed tree that is ready for rendering by render module.
+%%   4. Returns transformed tree that is ready for rendering by the render module.
 parse_inlines(T) ->
     Closed = close(T),
     transform_tree_inlines(Closed).
 
-%% transform_tree_inlines traverse the parsing tree of closed blocks
-%% and converts inline elements - paragraphs and headings - into style elements
-%% like str, emph or italic.
+%% transform_tree_inlines/1 traverse the parsing tree of closed blocks
+%% and converts the content of inline elements - paragraphs and headings - into
+%% the style elements like str, emph or italic.
 transform_tree_inlines(T={paragraph, _}) ->
     parse_inline(T);
 transform_tree_inlines({code_fence, T}) ->
@@ -309,35 +324,21 @@ transform_tree_inlines({code_fence, T}) ->
 transform_tree_inlines({Type, ClosedBlocks}) ->
     {Type, lists:map(fun transform_tree_inlines/1, ClosedBlocks)}.
 
-parse_inlines_test() ->
-    ?assertEqual(
-        {document, [{paragraph, [{italic, "test"}, {str, " par "}, {emph, "agraph"}]}]},
-        parse_inlines({document, [], {paragraph, [], "*test* par **agraph**"}})),
-    ?assertEqual(
-        {document, [{code_fence, ""}]},
-        parse_inlines({document,[], {code_fence, [], ""}})).
 
-%% parse_inline implements the phase 2 of CommonMark parsing, i.e.
+%% parse_inline/1 implements the phase 2 of CommonMark parsing, i.e.
 %% converting the content of paragraphs and headings into
 %% a list of str, emph, italic etc. elements, ready to apply formatting
 %% in the render part.
 parse_inline({paragraph, T}) ->
     {paragraph, parse_inline_text(T, 0, [], [], [])}.
 
-%% parse_inline_text reads the text T, goes through characters and produces
-%% the list of {<type>, <subseq>} pair with proper formatting, where
-%% <type> is one of:
-%%   * emph
-%%   * italic
-%%   * inline_code
-%%   * soft_break
-%% TODO: support links and images.
+%% append_result/3 is just a helper function for parse_inline_text/5.
 append_result(Rs, _, []) ->
     Rs;
 append_result(Rs, Type, R) ->
     Rs ++ [{Type, R}].
 
-%% parse_inline_text goes through text and collects different formattings
+%% parse_inline_text/5 goes through text and collects different formattings
 %% inside Result list.
 %% It accepts:
 %%   * text left to be parsed
@@ -346,9 +347,11 @@ append_result(Rs, Type, R) ->
 %%     (TODO: fix openers removal, currently
 %%   * buffer, i.e. text collected to be formatted with the next formatter
 %%   * resulting list of pairs {<type>, <text>}
-%% TODO: generalize opener/closer cases
+%% TODO: support links and images.
+%% TODO: generalize opener/closer cases, as for now they cannot be nested.
 parse_inline_text([], _, _, [], Result) -> Result;
 parse_inline_text([], _, _, Buffer, Result) -> Result ++ [{str, Buffer}];
+
 %% inline code
 parse_inline_text([96|T], N, Stack, Buffer, Result) ->
     case  lists:keyfind(inline_code, 1, Stack) of
@@ -359,6 +362,7 @@ parse_inline_text([96|T], N, Stack, Buffer, Result) ->
         {inline_code, _} ->
             parse_inline_text(T, N+1, lists:keydelete(inline_code, 1, Stack), "", append_result(Result, inline_code, Buffer))
     end;
+
 %% emphasis
 parse_inline_text([42|T], N, Stack, Buffer, Result) ->
     case T of
@@ -381,9 +385,11 @@ parse_inline_text([42|T], N, Stack, Buffer, Result) ->
                     parse_inline_text(T, N+1, lists:keydelete(italic, 1, Stack), "", append_result(Result, italic, Buffer))
             end
     end;
+
 parse_inline_text([H|T], N, Stack, Buffer, Result) ->
     parse_inline_text(T, N+1, Stack, Buffer ++ [H], Result).
 
+%% Test functions below only
 markdown_test() ->
     ?assertEqual({ok, {document, [{code_fence, "code"}]}}, markdown("```\ncode\n```")),
     ?assertEqual(
@@ -573,7 +579,13 @@ close_test() ->
         {document, [{code_fence, ""}]},
         close({document, [], {code_fence, [], ""}})).
 
-
+parse_inlines_test() ->
+    ?assertEqual(
+        {document, [{paragraph, [{italic, "test"}, {str, " par "}, {emph, "agraph"}]}]},
+        parse_inlines({document, [], {paragraph, [], "*test* par **agraph**"}})),
+    ?assertEqual(
+        {document, [{code_fence, ""}]},
+        parse_inlines({document,[], {code_fence, [], ""}})).
 
 parse_inline_test() ->
     ?assertEqual(
