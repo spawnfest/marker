@@ -114,11 +114,11 @@ merge_blocks({TypeA, ClosedA, OpenA}, B) ->
 
 
 line_to_block(">" ++ T) ->
-    {block_quote, [], line_to_block(string:strip(T, left))};
+    {block_quote, [], line_to_block(string:trim(T, leading))};
 
 %% Thematic breaks
 line_to_block(M = "___" ++ T) ->
-  case string:strip(T) of
+  case string:trim(T) of
     [] ->
       {horizontal_line, [], none};
     _ ->
@@ -126,7 +126,7 @@ line_to_block(M = "___" ++ T) ->
   end;
 
 line_to_block(M = "***" ++ T) ->
-  case string:strip(T) of
+  case string:trim(T) of
     [] ->
       {horizontal_line, [], none};
     _ ->
@@ -134,7 +134,7 @@ line_to_block(M = "***" ++ T) ->
   end;
 
 line_to_block(M = "---" ++ T) ->
-  case string:strip(T) of
+  case string:trim(T) of
     [] ->
       {horizontal_line, [], none};
     _ ->
@@ -144,7 +144,7 @@ line_to_block(M = "---" ++ T) ->
 
 %% List items
 line_to_block("- " ++ T) ->
-  {bullet_list, [], {list_item, [], line_to_block(string:strip(T, left))}};
+  {bullet_list, [], {list_item, [], line_to_block(string:trim(T, leading))}};
 
 line_to_block("-" ++ T) ->
   {paragraph, [], "-" ++ T};
@@ -152,22 +152,22 @@ line_to_block("-" ++ T) ->
 
 %% Headings
 line_to_block("###### " ++ T) ->
-    {heading6, [], line_to_block(string:strip(T, left))};
+    {heading6, [], line_to_block(string:trim(T, leading))};
 
 line_to_block("##### " ++ T) ->
-    {heading5, [], line_to_block(string:strip(T, left))};
+    {heading5, [], line_to_block(string:trim(T, leading))};
 
 line_to_block("#### " ++ T) ->
-    {heading4, [], line_to_block(string:strip(T, left))};
+    {heading4, [], line_to_block(string:trim(T, leading))};
 
 line_to_block("### " ++ T) ->
-    {heading3, [], line_to_block(string:strip(T, left))};
+    {heading3, [], line_to_block(string:trim(T, leading))};
 
 line_to_block("## " ++ T) ->
-    {heading2, [], line_to_block(string:strip(T, left))};
+    {heading2, [], line_to_block(string:trim(T, leading))};
 
 line_to_block("# " ++ T) ->
-    {heading1, [], line_to_block(string:strip(T, left))};
+    {heading1, [], line_to_block(string:trim(T, leading))};
 
 line_to_block("#" ++ "") ->
     {heading1, [], none};
