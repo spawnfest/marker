@@ -92,3 +92,21 @@
 p {
   display: inline;
 }
+
+hr {
+  border: 1px black solid;
+}
+
+.output-container {
+  width: 100%;
+  max-height: 500px;
+  border: 1px solid gray;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
+  min-height: 50px;
+}
+
+.hide {
+  display: none;
+}
