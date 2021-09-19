@@ -12,15 +12,35 @@
 
   <hr />
 
-  <h3>Generated HTML</h3>
-  <div style="width: 500px; max-height: 500px">
-  <%= @generated_html %>
-  </div>
+  <label>
+  <input phx-update="ignore" type="checkbox" onchange="toggleDebug(this)">Show debug preview</label>
+  <div class="debug-preview">
+    <h3>Generated HTML</h3>
+    <div style="width: 500px; max-height: 500px">
+    <%= @generated_html %>
+    </div>
 
-  <hr />
+    <hr />
 
-  <h3>Parsing Result</h3>
-  <div style="width: 500px; max-height: 500px">
-  <%= inspect(@result) %>
+    <h3>Parsing Result</h3>
+    <div style="width: 500px; max-height: 500px">
+    <%= inspect(@result) %>
+    </div>
   </div>
 </div>
+
+<script type="text/javascript">
+ function toggleDebug(checkbox) {
+    var d = document.getElementsByClassName("debug-preview");
+    if (d.length === 0) return;
+    if (checkbox.checked) {
+      d[0].style.display = "block";
+    } else {
+      d[0].style.display = "none";
+    }
+ }
+
+ window.onload = function() {
+  document.getElementsByClassName("debug-preview")[0].style.display = 'none';
+};
+</script>
