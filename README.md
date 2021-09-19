@@ -63,6 +63,11 @@ Currenly `marker` (to some buggy extend) supports these Markdown elements:
 TBD:
 * links
 * images
+* handling leading/trailing spaces
+* handling UTF-8 strings
+* nested formatting
+* different edge cases
+* more tests
 
 ## Authors
 
