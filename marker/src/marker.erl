@@ -370,7 +370,10 @@ markdown_test() ->
     ?assertEqual({ok, {document, [{code_fence, "code"}]}}, markdown("```\ncode\n```")),
     ?assertEqual(
         {ok, {document, [{code_fence, "dsada"}, {paragraph, [{str, "d"}]}]}},
-        markdown("```\ndsada\n```\nd")).
+        markdown("```\ndsada\n```\nd")),
+    ?assertEqual(
+        {ok,{document,[{paragraph,[{inline_code,"inline code"}]}]}},
+        markdown("`inline code`")).
 
 phase1_test() ->
     ?assertEqual({ok, {document, [], none}}, phase1("")),
