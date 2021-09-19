@@ -1,3 +1,4 @@
+![Marker logo](logo.png)
 # Marker [![Erlang CI](https://github.com/spawnfest/marker/actions/workflows/erlang.yml/badge.svg)](https://github.com/spawnfest/marker/actions/workflows/erlang.yml)
 
 Marker is an Erlang Markdown library, including parser and renderer.
