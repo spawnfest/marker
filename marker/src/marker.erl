@@ -99,8 +99,6 @@ block_to_string(none) ->
     "";
 
 block_to_string({Type, ClosedBlocks, OpenBlock}) ->
-    erlang:display(ClosedBlocks),
-    erlang:display(OpenBlock),
     atom_to_list(Type) ++ "\n" ++ blocks_to_string(ClosedBlocks) ++ block_to_string(OpenBlock).
 
 %% When there are no blocks in the array
