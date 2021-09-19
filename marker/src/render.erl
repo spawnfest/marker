@@ -5,6 +5,8 @@
 
 -export([html/1]).
 
+%% tags are opening and closing tags for block (non-leaf) elements
+%% of the parsing tree.
 tags() ->
     #{
       heading1 =>   #{open => "<h1>", close => "</h1>"},
@@ -30,6 +32,8 @@ html({emph, Text}) ->
     "<b>" ++ Text ++ "</b>";
 html({code_fence, Text}) ->
     "<pre>" ++ Text ++ "</pre>";
+html({inline_code, Text}) ->
+    "<code>" ++ Text ++ "</code>";
 html({Type, Blocks}) ->
     OpenTag = maps:get(open, maps:get(Type, tags())),
     CloseTag = maps:get(close, maps:get(Type, tags())),
