@@ -7,7 +7,12 @@
 
 tags() ->
     #{
-      heading =>   #{open => "<h2>", close => "</h2>"},
+      heading1 =>   #{open => "<h1>", close => "</h1>"},
+      heading2 =>   #{open => "<h2>", close => "</h2>"},
+      heading3 =>   #{open => "<h3>", close => "</h3>"},
+      heading4 =>   #{open => "<h4>", close => "</h4>"},
+      heading5 =>   #{open => "<h5>", close => "</h5>"},
+      heading6 =>   #{open => "<h6>", close => "</h6>"},
       paragraph =>   #{open => "<p>", close => "</p>"},
       horizontal_line => #{open => "<hr />", close => ""},
       block_quote => #{open => "<blockquote>", close => "</blockquote>"},
