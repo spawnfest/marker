@@ -4,7 +4,7 @@ defmodule MarkerWebWeb.PageLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, markdown: "", result: "", rendered_markdown: "")}
+    {:ok, assign(socket, markdown: "", result: "", generated_html: "")}
   end
 
   @impl true
@@ -18,7 +18,7 @@ defmodule MarkerWebWeb.PageLive do
         socket,
         markdown: "",
         result: parsed_markdown,
-        rendered_markdown: render_markdown(parsed_markdown)
+        generated_html: generate_html(parsed_markdown)
       )
     }
   end
@@ -27,7 +27,7 @@ defmodule MarkerWebWeb.PageLive do
     :marker.markdown(markdown |> to_charlist())
   end
 
-  defp render_markdown(parsed_markdown) do
-    :render.block_to_html(parsed_markdown)
+  defp generate_html(parsed_markdown) do
+    :render.html(parsed_markdown)
   end
 end
