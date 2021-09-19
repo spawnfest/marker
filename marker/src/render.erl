@@ -3,64 +3,34 @@
 -module(render).
 -include_lib("eunit/include/eunit.hrl").
 
--export([block_to_html/1]).
+-export([html/1]).
 
 tags() ->
     #{
-      paragraph =>   #{
-                       open => "<p>",
-                       close => "</p>"
-                      },
-      block_quote => #{
-                       open => "<blockquote>",
-                       close => "</blockquote>"
-                      },
-      bullet_list => #{
-                       open => "<ul>",
-                       close => "</ul>"
-                      },
-      list_item =>   #{
-                       open => "<li>",
-                       close => "</li>"
-                      },
-      document =>    #{
-                       open => "<div>",
-                       close => "</div>"
-                      }
+      paragraph =>   #{open => "<p>", close => "</p>"},
+      block_quote => #{open => "<blockquote>", close => "</blockquote>"},
+      bullet_list => #{open => "<ul>", close => "</ul>"},
+      list_item =>   #{open => "<li>", close => "</li>"},
+      document =>    #{open => "<div>", close => "</div>"}
      }.
 
-%% Base cases for our block_to_string/1 function
-%% are either a paragraph block or a none atom.
-block_to_html({paragraph, [], Text}) ->
-    "<p>" ++ Text ++ "</p>"; %% Close tags here
-
-block_to_html(none) ->
-    "";
-
-block_to_html({Type, ClosedBlocks, OpenBlock}) ->
+html({str, Text}) ->
+    Text;
+html({italic, Text}) ->
+    "<i>" ++ Text ++ "</i>";
+html({emph, Text}) ->
+    "<b>" ++ Text ++ "</b>";
+html({Type, Blocks}) ->
     OpenTag = maps:get(open, maps:get(Type, tags())),
     CloseTag = maps:get(close, maps:get(Type, tags())),
-    OpenTag ++ blocks_to_html(ClosedBlocks) ++ block_to_html(OpenBlock) ++ CloseTag.
+    OpenTag ++ lists:flatten(lists:map(fun html/1, Blocks)) ++ CloseTag.
 
-%% When there are no blocks in the array
-blocks_to_html([]) ->
-    "";
-
-blocks_to_html([Block = {_, _, _}|Rest]) ->
-    block_to_html(Block) ++ blocks_to_html(Rest).
-
-block_to_html_test() ->
+html_test() ->
     ?assertEqual("<div></div>",
-                 block_to_html({document, [], none})),
+                 html({document, []})),
 
     ?assertEqual("<div><p>foo</p></div>",
-                 block_to_html({document,
-                                [
-                                 {paragraph, [], "foo"}
-                                ],
-                                none})),
+                 html({document, [{paragraph, [{str, "foo"}]}]})),
 
     ?assertEqual("<div><ul><li></li></ul></div>",
-                 block_to_html({document,
-                                [],
-                                {bullet_list, [], {list_item, [], none}}})).
+                 html({document, [{bullet_list, [{list_item, []}]}]})).

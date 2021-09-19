@@ -8,11 +8,8 @@
 
 %% markdown/1 parses given string and returns a (possibly nested) list
 %% describing the CommonMark (default flavour) document's structure.
-%% Each element is either:
-%%   * a tuple in form {type, [T]} describing subdocument, e.g. ordered list
-%%   * a tuple in form {type, text, alttext}, where type is the type of the element
 %%
-%% Type returned in tuples described above can be one of:
+%% Possible types of the elements:
 %%   * str
 %%   * paragraph
 %%   * bullet_list
@@ -21,12 +18,16 @@
 %%   * emph
 %%   * link
 markdown(T)
-    -> {ok, parse_into_blocks(T)}.
+    -> {ok, parse_inlines( % phase 2
+        parse_into_blocks(T))}. % phase 1
 
-%% markdown/2 parses given string according to passed flavour.
+%% phase1/2 parses given string according to passed flavour.
 %% At the moment the only supported flavour for the time being is CommonMark.
-markdown(T, _)
-    -> markdown(T).
+phase1(T, _)
+    -> phase1(T).
+
+phase1(T) ->
+    {ok, parse_into_blocks(T)}.
 
 %% parse_blocks implements the first phase of CommonMark parsing strategy,
 %% dividing input text into blocks.
@@ -152,6 +153,8 @@ parse_inlines_test() ->
 %% tree and moves currently open block to the closed blocks list and drops
 %% the third element from the list, i.e.
 %%   {<type>, ClosedBlocks, OpenBlock} => {<type>, ClosedBlocks ++ [OpenBlock]}
+close(none) ->
+    {paragraph, []}; % TODO: treat none as an empty string.
 close({paragraph, [], T}) ->
     {paragraph, T};
 close([H|T]) ->
@@ -236,18 +239,18 @@ parse_inline_text([H|T], N, Stack, Buffer, Result) ->
     parse_inline_text(T, N+1, Stack, Buffer ++ [H], Result).
 
 
-markdown_test() ->
-    ?assertEqual({ok, {document, [], none}}, markdown("")),
-    ?assertEqual({ok, {document, [], {paragraph, [], "testpar"}}}, markdown("testpar")),
+phase1_test() ->
+    ?assertEqual({ok, {document, [], none}}, phase1("")),
+    ?assertEqual({ok, {document, [], {paragraph, [], "testpar"}}}, phase1("testpar")),
     ?assertEqual(
         {ok, {document, [{paragraph, [], "testpar"}], {paragraph, [], "nextpar"}}},
-        markdown("testpar\n\nnextpar")),
+        phase1("testpar\n\nnextpar")),
     ?assertEqual(
         {ok, {document, [],
             {block_quote, [],
                 {bullet_list, [{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}}},
-        markdown(
+        phase1(
 "> - Qui *quodsi iracundia*\n"
 "> - aliquando id")),
     ?assertEqual(
@@ -255,7 +258,7 @@ markdown_test() ->
             {block_quote, [{paragraph, [], "Lorem ipsum dolor\nsit amet."}],
                 {bullet_list, [{list_item, [], {paragraph, [], "Qui *quodsi iracundia*"}}],
                     {list_item, [], {paragraph, [], "aliquando id"}}}}}},
-        markdown("> Lorem ipsum dolor\n"
+        phase1("> Lorem ipsum dolor\n"
                  "sit amet.\n"
                  "> - Qui *quodsi iracundia*\n"
                  "> - aliquando id")).
